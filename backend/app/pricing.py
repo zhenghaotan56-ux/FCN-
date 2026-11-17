@@ -65,7 +65,7 @@ def solve_coupon(terms, market, volatility, paths=100_000, seed=42):
     settlements = np.array([year_fraction(start, e["settlement"]) for e in events])
     rate, dividend = market["rate"], market["dividend_yield"]
     coupon_annuity = accruals * np.exp(-rate * payments)
-    if terms["ko"] is None:
+    if terms["ko"] is None or not any(event["can_call"] for event in events):
         time = observations[-1]
         put = european_put(terms["reference_price"], terms["strike"], rate, dividend, volatility, time)
         discount = exp(-rate * settlements[-1])

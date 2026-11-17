@@ -9,6 +9,8 @@ const resultPanel = document.querySelector("#results");
 const csrf = document.querySelector('meta[name="csrf-token"]').content;
 const numberFormat = new Intl.NumberFormat("zh-Hans", {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const money = (value) => numberFormat.format(value);
+const stockPrice = new Intl.NumberFormat("zh-Hans", {minimumFractionDigits: 2, maximumFractionDigits: 6});
+const price = (value) => stockPrice.format(value);
 const percent = (value) => `${(value * 100).toFixed(2)}%`;
 const defaultPreview = previewPanel.firstElementChild.cloneNode(true);
 let previewRecord = null;
@@ -65,7 +67,8 @@ function readForm() {
   return {
     instrument_id: controls.instrument_id.value,
     notional: controls.notional.value,
-    as_of: controls.as_of.value || null,
+    tenor_months: controls.tenor_months.value,
+    lookback_months: controls.lookback_months.value,
     strike_unit: controls.strike_unit.value,
     strike_value: controls.strike_value.value,
     knockout: controls.knockout.value,
@@ -75,20 +78,25 @@ function readForm() {
 }
 
 function setDraft(draft) {
-  for (const name of Object.keys(readForm())) controls[name].value = draft[name] ?? "";
+  for (const name of Object.keys(readForm())) {
+    const fallback = ["tenor_months", "lookback_months"].includes(name) ? "3" : "";
+    controls[name].value = draft[name] ?? fallback;
+  }
   updateKnockout();
   resetPreview();
 }
 
 function showPreview(record) {
   const {terms, market, instrument} = record;
+  const priceKind = market.price_kind === "realtime" ? "盘中最新成交价" : "参考收盘价";
   const values = [
     ["挂钩标的", `${instrument.name} · ${instrument.ticker}`],
-    ["参考收盘", `${money(market.close)} ${terms.currency}`],
-    ["接货价", `${money(terms.strike)}（${terms.strike_pct.toFixed(2)}%）`],
-    ["敲出价", terms.ko === null ? "无敲出" : `${money(terms.ko)}（${terms.ko_pct.toFixed(2)}%）`],
+    [priceKind, `${price(terms.reference_price)} ${terms.currency}`],
+    ["接货价", `${price(terms.strike)}（${terms.strike_pct.toFixed(2)}%）`],
+    ["敲出价", terms.ko === null ? "无敲出" : `${price(terms.ko)}（${terms.ko_pct.toFixed(2)}%）`],
     ["面值", `${money(terms.notional)} ${terms.currency}`],
-    ["估值基准日", market.as_of],
+    ["票据期限", `${terms.tenor_months} 个月`],
+    ["行情时点（交易所当地）", (market.price_at || market.as_of).replace("T", " ")],
   ];
   const pairs = element("dl", undefined, "kv");
   for (const [label, value] of values) {
@@ -107,6 +115,7 @@ function showPreview(record) {
 
 function chart(record) {
   const {rows} = record.market;
+  const window = record.market.lookback_months || 3;
   const {strike, ko, currency} = record.terms;
   const prices = rows.map(row => row.close);
   const levels = ko === null ? [strike] : [strike, ko];
@@ -119,7 +128,7 @@ function chart(record) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", "最近三个月收盘价走势及接货、敲出价");
+  svg.setAttribute("aria-label", `最近 ${window} 个月收盘价走势及接货、敲出价`);
 
   function draw(tag, attributes, content) {
     const node = document.createElementNS(svg.namespaceURI, tag);
@@ -128,9 +137,9 @@ function chart(record) {
     svg.append(node);
   }
   for (let i = 0; i <= 4; i++) {
-    const price = min + i * span / 4;
-    draw("line", {x1:70, x2:810, y1:y(price), y2:y(price), stroke:"#dce8f0"});
-    draw("text", {x:62, y:y(price) + 4, "text-anchor":"end"}, money(price));
+    const tick = min + i * span / 4;
+    draw("line", {x1:70, x2:810, y1:y(tick), y2:y(tick), stroke:"#dce8f0"});
+    draw("text", {x:62, y:y(tick) + 4, "text-anchor":"end"}, price(tick));
   }
   for (const [index, level] of levels.entries()) {
     const color = index === 0 ? "#99753b" : "#5f718e";
@@ -145,7 +154,7 @@ function chart(record) {
   draw("text", {x:70, y:235}, rows[0].date);
   draw("text", {x:810, y:235, "text-anchor":"end"}, rows.at(-1).date);
   const container = element("div", undefined, "chart");
-  container.append(element("h3", "近三个月收盘价"), svg);
+  container.append(element("h3", `近 ${window} 个月收盘价`), svg);
   return container;
 }
 
@@ -180,7 +189,7 @@ function showResult(record) {
   const metrics = element("div", undefined, "metrics");
   for (const [label, value] of [
     ["估算年化票息", percent(result.annual_coupon)],
-    [terms.ko === null ? "三个月票息比例" : "未提前敲出时的全期票息", percent(result.full_term_coupon)],
+    [terms.ko === null ? `${terms.tenor_months} 个月全期票息` : "未提前敲出时的全期票息", percent(result.full_term_coupon)],
     ["参数敏感区间（年化）", result.range.map(percent).join(" – ")],
   ]) {
     const metric = element("div", undefined, "metric");
@@ -190,7 +199,7 @@ function showResult(record) {
   const method = element("details");
   method.append(element("summary", "查看计算依据"));
   method.append(element("p", `${result.method} · ${result.model} · ${terms.version}。${result.range_method}。`));
-  method.append(element("p", `历史波动率 ${percent(market.volatility)}，样本 ${market.volatility_observations} 笔日收益。连续利率 ${percent(market.rate)}，股息率 ${percent(market.dividend_yield)}。${market.assumption_source}。`));
+  method.append(element("p", `历史波动率 ${percent(market.volatility)}，样本 ${market.volatility_observations} 笔日收益，截至 ${market.history_end || market.as_of}。连续利率 ${percent(market.rate)}，股息率 ${percent(market.dividend_yield)}。${market.assumption_source}。`));
   if (result.standard_error !== null) {
     method.append(element("p", `模拟 ${result.paths.toLocaleString()} 条路径，种子 ${result.seed}，年化票息标准误 ${(result.standard_error * 10000).toFixed(2)} 个基点。`));
   }
@@ -266,7 +275,7 @@ form.addEventListener("submit", async (event) => {
   resetPreview();
   const current = revision;
   previewButton.disabled = true;
-  status("form-status", "正在获取收盘数据和观察日程…");
+  status("form-status", "正在获取参考价、历史行情和观察日程…");
   try {
     const record = await api("/api/terms/preview", readForm());
     if (current === revision) {
@@ -311,7 +320,7 @@ document.getElementById("parse").addEventListener("click", async (event) => {
   try {
     const draft = await api("/api/terms/parse", {message: document.getElementById("prompt").value});
     if (draft.unsupported.length) {
-      status("ai-status", `首版不支持：${draft.unsupported.join("、")}`, true);
+      status("ai-status", `请调整以下条款：${draft.unsupported.join("、")}`, true);
     } else if (current === revision) {
       setDraft(draft);
       status("ai-status", "草稿已填入表单，请核对并补齐空白项。");
@@ -328,7 +337,7 @@ document.getElementById("parse").addEventListener("click", async (event) => {
 for (const button of document.querySelectorAll("[data-example]")) {
   button.addEventListener("click", () => {
     const mode = button.dataset.example;
-    setDraft({instrument_id:"XHKG:00700", notional:100000, as_of:"2026-11-02",
+    setDraft({instrument_id:"XHKG:00700", notional:100000, tenor_months:3, lookback_months:3,
       strike_unit:"percent", strike_value:85, knockout:mode, ko_unit:"percent", ko_value:105});
   });
 }

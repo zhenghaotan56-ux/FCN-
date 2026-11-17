@@ -18,9 +18,9 @@
   <main class="shell">
     <section class="intro">
       <p class="eyebrow">港美股单标的 · 固定票息</p>
-      <h1>三个月 FCN 估值</h1>
+      <h1>FCN 票息估值</h1>
       <p>设定接货价与敲出条款，查看估算票息和不同情景下的结算金额。</p>
-      {% if fixture %}<span class="badge">离线演示 · 合成行情</span>{% elif research %}<span class="badge">内部研究 · OpenBB</span>{% else %}<span class="badge">授权行情 · 收盘估值</span>{% endif %}
+      {% if fixture %}<span class="badge">离线演示 · 合成行情</span>{% elif research %}<span class="badge">内部研究 · OpenBB 日线</span>{% else %}<span class="badge">联网行情 · 自动选价</span>{% endif %}
     </section>
     <div class="workspace">
       <section class="card inputs">
@@ -35,25 +35,33 @@
         </details>
         <form id="terms-form">
           <label>挂钩标的
+            {% if fixture %}
             <select name="instrument_id" required>
               <option value="">选择股票</option>
               {% for item in instruments %}<option value="{{ item.id }}">{{ item.name }} · {{ item.ticker }} · {{ item.currency }}</option>{% endfor %}
             </select>
+            {% else %}
+            <input name="instrument_id" list="stock-examples" placeholder="例如 00700.HK 或 AAPL" maxlength="24" autocomplete="off" spellcheck="false" required>
+            <datalist id="stock-examples">
+              {% for item in instruments %}<option value="{{ item.ticker + '.HK' if item.currency == 'HKD' else item.ticker }}">{{ item.name }}</option>{% endfor %}
+            </datalist>
+            {% endif %}
           </label>
           <div class="form-row">
             <label>票据面值<input name="notional" type="number" value="100000" min="100" max="100000000" step="0.01" required></label>
-            <label>估值日 <small>留空使用最近完整交易日</small><input name="as_of" type="date"></label>
+            <label>票据期限<select name="tenor_months">{% for month in tenors %}<option value="{{ month }}"{% if month == 3 %} selected{% endif %}>{{ month }} 个月</option>{% endfor %}</select></label>
           </div>
+          <label>波动率与走势回看<select name="lookback_months">{% for month in lookbacks %}<option value="{{ month }}"{% if month == 3 %} selected{% endif %}>约 {{ month }} 个月（{{ lookbacks[month] }} 笔日收益）</option>{% endfor %}</select></label>
           <div class="form-row">
             <label>接货价单位<select name="strike_unit"><option value="percent">参考价的百分比</option><option value="price">绝对价格</option></select></label>
-            <label>接货价<input name="strike_value" type="number" value="85" min="0.01" step="0.01" required></label>
+            <label>接货价<input name="strike_value" type="number" value="85" min="0.000001" step="any" required></label>
           </div>
           <label>敲出方式<select name="knockout" required><option value="">请选择</option><option value="none">无敲出</option><option value="monthly">每月敲出</option></select></label>
           <div class="form-row" id="ko-fields" hidden>
             <label>敲出价单位<select name="ko_unit"><option value="percent">参考价的百分比</option><option value="price">绝对价格</option></select></label>
-            <label>敲出价<input name="ko_value" type="number" value="105" min="0.01" step="0.01"></label>
+            <label>敲出价<input name="ko_value" type="number" value="105" min="0.000001" step="any"></label>
           </div>
-          <div class="fixed-terms">固定三个月 · 无敲入 · 终止时一次付息 · ACT/365F</div>
+          <div class="fixed-terms">无敲入 · 终止时一次付息 · ACT/365F</div>
           <button class="primary" id="preview" type="submit">获取行情并预览条款</button>
           {% if fixture %}<div class="examples"><button type="button" class="quiet" data-example="none">加载腾讯无敲出样例</button><button type="button" class="quiet" data-example="monthly">加载每月敲出样例</button></div>{% endif %}
           <p id="form-status" role="status" class="status"></p>
@@ -62,7 +70,7 @@
       <section class="card confirmation">
         <div class="section-head"><span class="step">02</span><h2>确认条款</h2></div>
         <div id="preview-panel" aria-live="polite">
-          <div class="empty"><span aria-hidden="true">↗</span><h3>等待条款预览</h3><p>预览会列出参考收盘、接货价、观察日和结算规则。</p></div>
+          <div class="empty"><span aria-hidden="true">↗</span><h3>等待条款预览</h3><p>预览会列出参考价、行情时点、接货价和观察日。</p></div>
         </div>
         <button id="confirm" type="button" class="primary" disabled>确认并计算票息</button>
         <p id="confirm-status" role="status" class="status"></p>

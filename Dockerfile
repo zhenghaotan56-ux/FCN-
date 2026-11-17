@@ -6,8 +6,8 @@ WORKDIR /srv/fcn
 ENV PYTHONUNBUFFERED=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 COPY pyproject.toml uv.lock ./
 ARG FCN_OPENBB_EXTRA=0
-RUN if [ "$FCN_OPENBB_EXTRA" = 1 ]; then uv sync --locked --no-dev --extra serve --extra openbb; \
-    else uv sync --locked --no-dev --extra serve; fi
+RUN if [ "$FCN_OPENBB_EXTRA" = 1 ]; then uv sync --locked --no-dev --extra serve --extra live --extra openbb; \
+    else uv sync --locked --no-dev --extra serve --extra live; fi
 COPY backend backend
 COPY frontend frontend
 COPY demo demo

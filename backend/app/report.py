@@ -1,4 +1,4 @@
-"""Render the saved valuation and terms as a one-page customer PDF."""
+"""Render the saved valuation and terms as a customer PDF."""
 
 from io import BytesIO
 from xml.sax.saxutils import escape
@@ -33,7 +33,7 @@ def quote_pdf(record):
         return Paragraph(escape(str(text)), style)
 
     def table(rows, widths):
-        result_table = Table([[para(value) for value in row] for row in rows], colWidths=widths)
+        result_table = Table([[para(value) for value in row] for row in rows], colWidths=widths, repeatRows=1)
         result_table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), PALE),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F8FB")]),
@@ -43,10 +43,16 @@ def quote_pdf(record):
         ]))
         return result_table
 
-    ko = "无敲出" if terms["ko"] is None else f"每月敲出 {terms['ko']:,.2f}"
+    def stock_price(value):
+        whole, fraction = f"{value:,.6f}".split(".")
+        return f"{whole}.{fraction[:2]}{fraction[2:].rstrip('0')}"
+
+    ko = "无敲出" if terms["ko"] is None else f"每月敲出 {stock_price(terms['ko'])}"
+    price_kind = "盘中最新成交价" if market.get("price_kind") == "realtime" else "参考收盘价"
+    price_at = market.get("price_at", market["as_of"]).replace("T", " ")
     band = f"{result['range'][0]:.2%} – {result['range'][1]:.2%}"
     story = [
-        para("固定票息票据 · 三个月估值", title),
+        para(f"固定票息票据 · {terms['tenor_months']} 个月估值", title),
         para(f"{name}  {terms['instrument_id']}  |  {terms['currency']}  |  估值日 {market['as_of']}"),
         para(f"估值编号 {record['id']}"),
         Spacer(1, 14),
@@ -56,8 +62,9 @@ def quote_pdf(record):
         ], [169, 169, 170]),
         Spacer(1, 13),
         para("已确认条款", section),
-        para(f"参考收盘 {terms['reference_price']:,.2f} · 接货价 {terms['strike']:,.2f} "
+        para(f"{price_kind} {stock_price(terms['reference_price'])} · 接货价 {stock_price(terms['strike'])} "
              f"（{terms['strike_pct']:.2f}%） · {ko} · 面值 {terms['notional']:,.2f} {terms['currency']}"),
+        para(f"行情时点（交易所当地） {price_at} · 历史行情截至 {market.get('history_end', market['as_of'])}"),
         para(f"观察日 {' / '.join(event['observation'] for event in terms['events'])}。"
              "无敲入，存续期固定计息，终止时一次付息，ACT/365F。"),
         Spacer(1, 12),

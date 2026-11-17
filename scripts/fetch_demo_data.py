@@ -25,6 +25,11 @@ def generate_fixture():
         prices = np.exp(np.r_[0, returns.cumsum()])
         prices *= close / prices[-1]
         prices[-1] = close
+        earlier = dates_between(BY_ID[identifier], add_months(end, -14), add_months(end, -4))
+        earlier = [day for day in earlier if day < sessions[0]]
+        increments = np.random.default_rng(seed + 1).normal(scale=vol / np.sqrt(252), size=len(earlier))
+        prices = np.r_[prices[0] * np.exp(-np.cumsum(increments)[::-1]), prices]
+        sessions = earlier + sessions
         rows.extend((identifier, day.isoformat(), f"{price:.8f}", f"{price:.8f}")
                     for day, price in zip(sessions, prices))
     output = ROOT / "demo/daily_prices.csv"

@@ -400,6 +400,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+live = [
+    { name = "longbridge" },
+]
 openbb = [
     { name = "openbb" },
     { name = "openbb-yfinance" },
@@ -417,6 +420,7 @@ dev = [
 requires-dist = [
     { name = "flask", specifier = ">=3.1,<4" },
     { name = "gunicorn", marker = "extra == 'serve'", specifier = ">=23,<27" },
+    { name = "longbridge", marker = "extra == 'live'", specifier = "==5.2.2" },
     { name = "numpy", specifier = ">=2,<3" },
     { name = "openbb", marker = "extra == 'openbb'", specifier = "==4.7.2" },
     { name = "openbb-yfinance", marker = "extra == 'openbb'", specifier = "==1.6.3" },
@@ -426,7 +430,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32,<3" },
     { name = "tzdata", specifier = ">=2025.2" },
 ]
-provides-extras = ["openbb", "serve"]
+provides-extras = ["openbb", "serve", "live"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=8,<10" }]
@@ -572,6 +576,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d9/23/d2c8308466a6831043ac3518e480c2e1a06b21a13e0a8f6542ab29cf592a/lazy_importer-0.1.0.tar.gz", hash = "sha256:b2e296716ce015c0cd80e57b940e52727c5b934b34b8656d5ce06bdd0ee5fbdd", size = 84008, upload-time = "2026-10-20T00:36:58.369Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0a/28/7ded071d0975dcc6d5d106ffbf7b3ca420f7caa3b8a235fa604b6e37032a/lazy_importer-0.1.0-py3-none-any.whl", hash = "sha256:bd93fab7bef18e842eea02b839410954d37889140dc64ca4d9680aec6880c739", size = 12580, upload-time = "2026-10-20T00:36:57.176Z" },
+]
+
+[[package]]
+name = "longbridge"
+version = "5.2.2"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/56/61/383e6b85318973dbaedf71d2fbbed3a43f588831715eaa369d564507d107/longbridge-5.2.2-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:3ee3f050c230967e766c5fba6ab39c6622edcd11eceecb8f3a659728f2e4d2c0", size = 13121899, upload-time = "2026-10-19T06:01:15.503Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/d9/e87ef1326caac93e4a77f3772c1fe984e8764a5b7730cd678a4aa2b9ed82/longbridge-5.2.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:fd4c078fa07c51763f93e62d401b8d42758301a5944b51ce6d6b00fee80e03ec", size = 12439054, upload-time = "2026-10-19T06:01:18.502Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/0b/7c6d72d84fd882e93dcc007c77d31979bf383d4490f42fd9482e9722fb24/longbridge-5.2.2-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:c186dd548c08c471757cd6ab300c787af5c8d8b63a17649d03c77839868928ae", size = 13033843, upload-time = "2026-10-19T06:01:21.266Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/9a/f5cb01f1fef73f5579b5dcbee621abe6942d78734853703fdb8fb359815c/longbridge-5.2.2-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:324618e4dc64545c69801cebf17ca3d59f6a8e0929592941aaff1025d2644b7b", size = 13274961, upload-time = "2026-10-19T06:01:24.153Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/9e/a57f7bb4b22c2304e4830b192e70a42f869f008f14a8979a6cb811424afd/longbridge-5.2.2-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:4fc9095583feb303ef49bd81432dea851b88949046b86625c900b5d24a4e781a", size = 13205381, upload-time = "2026-10-19T06:01:26.776Z" },
+    { url = "https://files.pythonhosted.org/packages/53/1d/8055a72184702d38696a5949e0e9a4aa78e2143876641f1c35f0b5a32cf1/longbridge-5.2.2-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:e26ba0524d4c369330ec126668412619ae5c5b0b2b70c491a7c63017dcd6953e", size = 13538718, upload-time = "2026-10-19T06:01:29.126Z" },
+    { url = "https://files.pythonhosted.org/packages/80/4a/f9ae414b4426cdc9c482fd5373a9ad894ba09202b456403baef49e9fcb60/longbridge-5.2.2-cp312-cp312-win_amd64.whl", hash = "sha256:89e1c762ce7fa4ed07534070c70cd6b5202a8c26e8e1c77e56782e92c8fe856b", size = 14204583, upload-time = "2026-10-19T06:01:31.387Z" },
 ]
 
 [[package]]

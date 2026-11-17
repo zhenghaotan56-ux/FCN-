@@ -71,7 +71,9 @@ def test_form_rejects_malformed_or_unsupported_contract(app):
 
 def test_ai_structured_draft_and_form_use_same_terms(app, monkeypatch):
     app.config.update(AI_KEY="test", AI_MODEL="test-model")
-    contract = {**draft(), "unsupported": []}
+    contract = draft()
+    contract.pop("as_of", None)
+    contract.update(tenor_months=3, lookback_months=3, unsupported=[])
 
     class Response:
         def raise_for_status(self):
@@ -125,7 +127,8 @@ def test_vendor_adapter_snapshot_reaches_pricer(app, monkeypatch):
         return Response()
 
     monkeypatch.setattr(market.requests, "get", mock_get)
-    monkeypatch.setattr(market, "latest_closed_session", lambda _: date(2026, 11, 2))
+    monkeypatch.setattr(market, "latest_closed_session", lambda *_: date(2026, 11, 2))
+    monkeypatch.setattr(market, "active_session", lambda *_: None)
     client = app.test_client()
     headers = login(client)
     preview = client.post("/api/terms/preview", json=draft("terms_no_ko.json"), headers=headers)
@@ -145,3 +148,23 @@ def test_vendor_adapter_snapshot_reaches_pricer(app, monkeypatch):
         ])
     quotes = client.get(f"/api/valuations/{key}").get_json()["issuer_quotes"]
     assert [(quote["issuer"], quote["basis"], quote["coupon"]) for quote in quotes] == [("有效报价", "annual", .07)]
+
+
+def test_variable_tenor_and_lookback_in_shared_demo(app):
+    client = app.test_client()
+    headers = login(client)
+    response = client.post("/api/terms/preview", json={**draft(), "tenor_months": 12, "lookback_months": 12,
+                                                     "as_of": "2025-01-01"}, headers=headers)
+    assert response.status_code == 201
+    record = response.get_json()
+    assert record["market"]["as_of"] == "2026-11-02"
+    assert record["market"]["volatility_observations"] == 252
+    assert sum(event["can_call"] for event in record["terms"]["events"]) == 11
+    assert record["terms"]["events"][-1]["observation"] == "2027-11-02"
+    key = record["id"]
+    assert client.post("/api/valuations", json={"preview_id": key}, headers=headers).status_code == 201
+    assert client.get(f"/api/valuations/{key}/report").data.startswith(b"%PDF")
+    response = client.post("/api/terms/preview", json={**draft(), "tenor_months": 1, "lookback_months": 1}, headers=headers)
+    record = response.get_json()
+    assert record["market"]["volatility_observations"] == 20
+    assert not record["terms"]["events"][0]["can_call"]

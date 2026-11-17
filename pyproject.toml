@@ -15,6 +15,9 @@ dependencies = [
 [project.optional-dependencies]
 openbb = ["openbb==4.7.2", "openbb-yfinance==1.6.3"]
 serve = ["gunicorn>=23,<27"]
+live = [
+    "longbridge==5.2.2",
+]
 
 [dependency-groups]
 dev = ["pytest>=8,<10"]

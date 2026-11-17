@@ -1,6 +1,6 @@
 # FCN 估值工作台
 
-港美股单标的固定票息票据估值工具。首版支持三个月、无敲入、无敲出或每月敲出。客户先确认参考收盘价、接货价和观察日期，再计算估算年化票息、持有至到期的票息比例和结算情景。结果与固定行情快照关联，可查看历史记录或导出 PDF。
+港美股单标的固定票息票据估值工具。支持 1–12 个月整月期限、无敲入、无敲出或每月敲出。波动率与股价走势支持独立回看约 1、3、6、12 个月。联网模式可直接输入股票代码。实时行情模式在正常连续交易时段取最新成交，其他时间取最近完整收盘。确认参考价、接货价与观察日后，可计算估算年化票息、全期票息和结算情景，并导出保存的估值报告。
 
 ## 本地运行
 
@@ -27,6 +27,7 @@ backend/app/main.py          网页与 JSON API、会话和条款确认入口
 backend/app/assistant.py     可选 AI 条款草稿
 backend/app/terms.py         校验、执行价换算与交易日程
 backend/app/market.py        模拟、OpenBB 或授权行情及固定快照
+backend/app/longbridge_feed.py  长桥港美股实时价格、证券正股资料和历史日线
 backend/app/pricing.py       解析定价、路径模拟与现金流
 backend/app/store.py         SQLite 持久化与按客户隔离
 backend/app/report.py        读取同一估值记录生成 PDF
@@ -51,6 +52,7 @@ Dockerfile / compose.yaml    私有环境部署入口
 | --- | --- | --- |
 | `fixture` | 离线演示 | 本地演示账号或自建账号 |
 | `openbb` | 内部联网验证 | 安装 `openbb` extra、显式启用研究行情、配置估值日利率和股息 |
-| `vendor` | 公司授权行情接入 | HTTPS 数据接口、服务端凭证和对应估值日的定价假设 |
+| `longbridge` | 港美股实时行情 | 长桥 OpenAPI 凭证、港股实时权限、利率假设和独立账号 |
+| `vendor` | 公司授权行情接入 | HTTPS 数据接口、服务端凭证、当期定价假设和独立账号 |
 
-容器演示可执行 `docker compose up --build`。端口绑定在本机回环地址。面向客户部署时使用授权行情、实名账号、独立密钥和公司 HTTPS 网关，具体环境变量与接口格式见数据文档。
+容器演示可执行 `docker compose up --build`。端口绑定在本机回环地址。Render 可使用仓库的 `Dockerfile`，健康检查路径为 `/healthz`。启用实时行情和 AI 的 [Render 配置步骤](docs/data.md#render-开启行情和-ai) 见数据文档。

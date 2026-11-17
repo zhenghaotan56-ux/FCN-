@@ -15,9 +15,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import assistant, market, pricing, store
 from .report import quote_pdf
-from .terms import BY_ID, INSTRUMENTS, ROOT, InputError, add_months, build_terms
+from .terms import INSTRUMENTS, LOOKBACKS, ROOT, TENORS, InputError, add_months, build_terms, month_choice, resolve_instrument
 
-FORM_FIELDS = set(assistant.FIELDS) - {"unsupported"}
+FORM_FIELDS = (set(assistant.FIELDS) - {"unsupported"}) | {"as_of"}
 
 
 def create_app(overrides=None):
@@ -34,8 +34,11 @@ def create_app(overrides=None):
         MAX_CONTENT_LENGTH=16_384, DEMO_LOGIN=demo_login, MARKET_MODE=os.getenv("FCN_MARKET_MODE", "fixture"),
         DB=os.getenv("FCN_DB", str(ROOT / "var/fcn.sqlite3")),
         USERS_FILE=os.getenv("FCN_USERS_FILE", str(ROOT / "private/users.json")),
+        USERS_JSON=os.getenv("FCN_USERS_JSON", ""),
         ASSUMPTIONS_FILE=os.getenv("FCN_ASSUMPTIONS_FILE", str(ROOT / "private/assumptions.json")),
+        ASSUMPTIONS_JSON=os.getenv("FCN_ASSUMPTIONS_JSON", ""),
         VENDOR_URL=os.getenv("FCN_VENDOR_URL", ""), VENDOR_TOKEN=os.getenv("FCN_VENDOR_TOKEN", ""),
+        LONGBRIDGE_HK_REALTIME=os.getenv("FCN_LONGBRIDGE_HK_REALTIME") == "1",
         AI_KEY=os.getenv("OPENAI_API_KEY", ""), AI_MODEL=os.getenv("OPENAI_MODEL", ""),
         ALLOW_RESEARCH_DATA=os.getenv("FCN_ALLOW_RESEARCH_DATA") == "1",
         MC_PATHS=100_000,
@@ -45,8 +48,8 @@ def create_app(overrides=None):
     cfg = app.config
     if not cfg["SECRET_KEY"] or len(cfg["SECRET_KEY"]) < 32:
         raise RuntimeError("Set a stable FCN_SECRET_KEY of at least 32 characters.")
-    if cfg["MARKET_MODE"] not in {"fixture", "openbb", "vendor"}:
-        raise RuntimeError("FCN_MARKET_MODE must be fixture, openbb or vendor.")
+    if cfg["MARKET_MODE"] not in {"fixture", "openbb", "vendor", "longbridge"}:
+        raise RuntimeError("FCN_MARKET_MODE must be fixture, openbb, vendor or longbridge.")
     if cfg["DEMO_LOGIN"] and cfg["MARKET_MODE"] != "fixture":
         raise RuntimeError("Demo credentials are restricted to fixture data.")
     if cfg["MARKET_MODE"] == "openbb" and not cfg["ALLOW_RESEARCH_DATA"]:
@@ -54,7 +57,7 @@ def create_app(overrides=None):
     if cfg["DEMO_LOGIN"]:
         users = {"demo": generate_password_hash("fcn-demo-only")}
     else:
-        users = json.loads(Path(cfg["USERS_FILE"]).read_text(encoding="utf-8-sig"))
+        users = json.loads(cfg["USERS_JSON"] or Path(cfg["USERS_FILE"]).read_text(encoding="utf-8-sig"))
         if not isinstance(users, dict) or not users or any(
             not isinstance(value, str) or not value.startswith("scrypt:") for value in users.values()
         ):
@@ -62,7 +65,6 @@ def create_app(overrides=None):
     fallback_hash = generate_password_hash(secrets.token_hex(16))
     store.initialize(cfg["DB"])
     available = [item for item in INSTRUMENTS if cfg["MARKET_MODE"] != "fixture" or item.get("demo")]
-    selectable_ids = {item["id"] for item in available}
 
     @app.after_request
     def headers(response):
@@ -122,7 +124,8 @@ def create_app(overrides=None):
 
     def public_record(record):
         market_data = record["market"]
-        chart_start = add_months(date.fromisoformat(market_data["as_of"]), -3).isoformat()
+        window = market_data.get("lookback_months", 3)
+        chart_start = add_months(date.fromisoformat(market_data.get("history_end", market_data["as_of"])), -window).isoformat()
         visible = {**market_data, "rows": [
             {"date": row["date"], "close": row["close"]}
             for row in market_data["rows"] if row["date"] >= chart_start
@@ -130,7 +133,7 @@ def create_app(overrides=None):
         return {
             "id": record["id"], "terms": record["terms"], "market": visible,
             "result": record["result"],
-            "instrument": BY_ID[record["terms"]["instrument_id"]],
+            "instrument": market_data.get("instrument") or resolve_instrument(record["terms"]["instrument_id"]),
             "issuer_quotes": store.active_quotes(cfg["DB"], record["terms_hash"])
             if record["result"] and market_data["mode"] == "vendor" else [],
         }
@@ -169,7 +172,7 @@ def create_app(overrides=None):
         return render_template(
             "index.html", csrf=session["csrf"], instruments=available,
             fixture=cfg["MARKET_MODE"] == "fixture", research=cfg["MARKET_MODE"] == "openbb",
-            ai_enabled=bool(cfg["AI_KEY"] and cfg["AI_MODEL"]),
+            ai_enabled=bool(cfg["AI_KEY"] and cfg["AI_MODEL"]), tenors=TENORS, lookbacks=LOOKBACKS,
         )
 
     @app.post("/api/terms/parse")
@@ -182,10 +185,9 @@ def create_app(overrides=None):
     def preview():
         draft = json_body()
         if not set(draft) <= FORM_FIELDS:
-            raise InputError("条款包含首版不支持的参数。")
-        if not isinstance(draft.get("instrument_id"), str) or draft["instrument_id"] not in selectable_ids:
-            raise InputError("请选择支持的港股或美股代码。")
-        snapshot = market.market_snapshot(cfg, draft["instrument_id"], draft.get("as_of"))
+            raise InputError("条款包含不支持的参数。")
+        month_choice(draft.get("tenor_months"), TENORS, "票据期限")
+        snapshot = market.market_snapshot(cfg, draft.get("instrument_id"), lookback_months=draft.get("lookback_months"))
         terms = build_terms(draft, snapshot)
         key = store.create_preview(cfg["DB"], session["user"], terms, snapshot)
         return jsonify(public_record(get_record(key))), 201
