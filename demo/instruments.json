@@ -1,0 +1,13 @@
+[
+  {"id":"XHKG:00700","ticker":"00700","name":"腾讯控股","currency":"HKD","calendar":"HKEX","provider_symbol":"0700.HK","demo":true},
+  {"id":"XNAS:MSFT","ticker":"MSFT","name":"微软","currency":"USD","calendar":"NASDAQ","provider_symbol":"MSFT","demo":true},
+  {"id":"XNAS:META","ticker":"META","name":"Meta Platforms","currency":"USD","calendar":"NASDAQ","provider_symbol":"META"},
+  {"id":"XHKG:09988","ticker":"09988","name":"阿里巴巴-W","currency":"HKD","calendar":"HKEX","provider_symbol":"9988.HK"},
+  {"id":"XHKG:03308","ticker":"03308","name":"中际旭创","currency":"HKD","calendar":"HKEX","provider_symbol":"3308.HK"},
+  {"id":"XHKG:06166","ticker":"06166","name":"剑桥科技","currency":"HKD","calendar":"HKEX","provider_symbol":"6166.HK"},
+  {"id":"XHKG:06809","ticker":"06809","name":"澜起科技","currency":"HKD","calendar":"HKEX","provider_symbol":"6809.HK"},
+  {"id":"XHKG:01347","ticker":"01347","name":"华虹宏力","currency":"HKD","calendar":"HKEX","provider_symbol":"1347.HK"},
+  {"id":"XHKG:00981","ticker":"00981","name":"中芯国际","currency":"HKD","calendar":"HKEX","provider_symbol":"0981.HK"},
+  {"id":"XHKG:01888","ticker":"01888","name":"建滔积层板","currency":"HKD","calendar":"HKEX","provider_symbol":"1888.HK"},
+  {"id":"XHKG:01989","ticker":"01989","name":"广合科技","currency":"HKD","calendar":"HKEX","provider_symbol":"1989.HK"}
+]

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf }}">
+  <title>FCN 估值工作台</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <div class="brand"><span class="mark" aria-hidden="true">F</span><div>FCN 估值工作台 <small>STRUCTURED PRODUCTS</small></div></div>
+      <form action="/logout" method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="quiet">退出登录</button></form>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="intro">
+      <p class="eyebrow">港美股单标的 · 固定票息</p>
+      <h1>三个月 FCN 估值</h1>
+      <p>设定接货价与敲出条款，查看估算票息和不同情景下的结算金额。</p>
+      {% if fixture %}<span class="badge">离线演示 · 合成行情</span>{% elif research %}<span class="badge">内部研究 · OpenBB</span>{% else %}<span class="badge">授权行情 · 收盘估值</span>{% endif %}
+    </section>
+    <div class="workspace">
+      <section class="card inputs">
+        <div class="section-head"><span class="step">01</span><h2>设置条款</h2></div>
+        <details class="assistant">
+          <summary>用一句话填写条款</summary>
+          <label for="prompt">描述你希望估值的结构</label>
+          <textarea id="prompt" maxlength="500" placeholder="腾讯港股，3个月，85%接货，105%每月敲出，面值10万港元"></textarea>
+          <button id="parse" type="button" class="secondary" {% if not ai_enabled %}disabled{% endif %}>生成条款草稿</button>
+          {% if not ai_enabled %}<small class="muted">AI 接口尚未配置，可直接使用表单。</small>{% endif %}
+          <p id="ai-status" role="status" class="status"></p>
+        </details>
+        <form id="terms-form">
+          <label>挂钩标的
+            <select name="instrument_id" required>
+              <option value="">选择股票</option>
+              {% for item in instruments %}<option value="{{ item.id }}">{{ item.name }} · {{ item.ticker }} · {{ item.currency }}</option>{% endfor %}
+            </select>
+          </label>
+          <div class="form-row">
+            <label>票据面值<input name="notional" type="number" value="100000" min="100" max="100000000" step="0.01" required></label>
+            <label>估值日 <small>留空使用最近完整交易日</small><input name="as_of" type="date"></label>
+          </div>
+          <div class="form-row">
+            <label>接货价单位<select name="strike_unit"><option value="percent">参考价的百分比</option><option value="price">绝对价格</option></select></label>
+            <label>接货价<input name="strike_value" type="number" value="85" min="0.01" step="0.01" required></label>
+          </div>
+          <label>敲出方式<select name="knockout" required><option value="">请选择</option><option value="none">无敲出</option><option value="monthly">每月敲出</option></select></label>
+          <div class="form-row" id="ko-fields" hidden>
+            <label>敲出价单位<select name="ko_unit"><option value="percent">参考价的百分比</option><option value="price">绝对价格</option></select></label>
+            <label>敲出价<input name="ko_value" type="number" value="105" min="0.01" step="0.01"></label>
+          </div>
+          <div class="fixed-terms">固定三个月 · 无敲入 · 终止时一次付息 · ACT/365F</div>
+          <button class="primary" id="preview" type="submit">获取行情并预览条款</button>
+          {% if fixture %}<div class="examples"><button type="button" class="quiet" data-example="none">加载腾讯无敲出样例</button><button type="button" class="quiet" data-example="monthly">加载每月敲出样例</button></div>{% endif %}
+          <p id="form-status" role="status" class="status"></p>
+        </form>
+      </section>
+      <section class="card confirmation">
+        <div class="section-head"><span class="step">02</span><h2>确认条款</h2></div>
+        <div id="preview-panel" aria-live="polite">
+          <div class="empty"><span aria-hidden="true">↗</span><h3>等待条款预览</h3><p>预览会列出参考收盘、接货价、观察日和结算规则。</p></div>
+        </div>
+        <button id="confirm" type="button" class="primary" disabled>确认并计算票息</button>
+        <p id="confirm-status" role="status" class="status"></p>
+      </section>
+    </div>
+    <section id="results" class="card results" data-ai="{{ 'yes' if ai_enabled else 'no' }}" hidden aria-live="polite"></section>
+    <section class="card history">
+      <div class="section-head"><span class="step">04</span><h2>我的估值记录</h2></div>
+      <div id="history" class="history-list"></div>
+      <p id="history-status" role="status" class="status"></p>
+    </section>
+    <footer>估算结果基于所示市场数据和模型假设。实际发行票息及结算规则以发行商最终条款为准。</footer>
+  </main>
+</body>
+</html>

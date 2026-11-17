@@ -1,0 +1,23 @@
+[project]
+name = "fcn-pricer"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "flask>=3.1,<4",
+    "numpy>=2,<3",
+    "pandas-market-calendars>=5,<6",
+    "python-dotenv>=1,<2",
+    "reportlab>=4.4,<5",
+    "requests>=2.32,<3",
+    "tzdata>=2025.2",
+]
+
+[project.optional-dependencies]
+openbb = ["openbb==4.7.2", "openbb-yfinance==1.6.3"]
+serve = ["gunicorn>=23,<27"]
+
+[dependency-groups]
+dev = ["pytest>=8,<10"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

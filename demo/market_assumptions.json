@@ -1,0 +1,6 @@
+{
+  "as_of": "2026-11-02",
+  "source": "离线演示假设",
+  "rates": {"HKD": 0.03, "USD": 0.03},
+  "dividend_yields": {"XHKG:00700": 0, "XNAS:MSFT": 0}
+}

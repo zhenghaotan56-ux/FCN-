@@ -1,0 +1,8 @@
+{
+  "terms_version": "fcn-3m-fixed-v1",
+  "model_version": "fcn-flat-gbm-v1",
+  "paths": 100000,
+  "seed": 42,
+  "annual_coupon": {"no_ko": 0.06589870, "monthly_ko": 0.07621655},
+  "monthly_ko_standard_error": 0.0004864
+}

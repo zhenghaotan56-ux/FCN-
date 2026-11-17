@@ -1,0 +1,12 @@
+{
+  "annual_coupon": 0.06,
+  "observations": ["2026-12-02", "2027-01-04", "2027-02-02"],
+  "cases": [
+    {"prices":[420,300,300],"ending_event":0,"principal_value":100000,"coupon":493.15},
+    {"prices":[400,420,300],"ending_event":1,"principal_value":100000,"coupon":1035.62},
+    {"prices":[400,400,380],"ending_event":2,"principal_value":100000,"coupon":1512.33},
+    {"prices":[400,400,300],"ending_event":2,"principal_value":89990.10,"coupon":1512.33},
+    {"prices":[411.81,0,0],"ending_event":0,"principal_value":100000,"coupon":493.15},
+    {"prices":[400,400,333.37],"ending_event":2,"principal_value":100000,"coupon":1512.33}
+  ]
+}
