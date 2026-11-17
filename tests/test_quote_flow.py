@@ -70,25 +70,34 @@ def test_form_rejects_malformed_or_unsupported_contract(app):
 
 
 def test_ai_structured_draft_and_form_use_same_terms(app, monkeypatch):
-    app.config.update(AI_KEY="test", AI_MODEL="test-model")
+    app.config.update(AI_KEY="test", AI_MODEL="deepseek-flash")
     contract = draft()
     contract.pop("as_of", None)
     contract.update(tenor_months=3, lookback_months=3, unsupported=[])
 
     class Response:
+        def __init__(self, body):
+            self.body = body
+
         def raise_for_status(self):
             pass
 
         def json(self):
-            return {"output": [{"type": "message", "content": [
-                {"type": "output_text", "text": json.dumps(contract)},
-            ]}]}
+            return {"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(self.body)}}]}
 
     def mock_post(url, **kwargs):
-        assert url == "https://api.openai.com/v1/responses"
-        assert kwargs["json"]["store"] is False
-        assert kwargs["json"]["text"]["format"]["strict"] is True
-        return Response()
+        assert url == "https://api.deepseek.com/chat/completions"
+        assert kwargs["headers"]["Authorization"] == "Bearer test"
+        payload = kwargs["json"]
+        assert payload["model"] == "deepseek-flash"
+        assert payload["thinking"] == {"type": "disabled"}
+        assert payload["response_format"] == {"type": "json_object"}
+        system, user = payload["messages"]
+        assert system["role"] == "system" and "Example JSON object" in system["content"]
+        assert user["role"] == "user"
+        if "Explain the supplied FCN mechanics" in system["content"]:
+            return Response({"explanation": "首次敲出时结算应计票息。"})
+        return Response(contract)
 
     monkeypatch.setattr(assistant.requests, "post", mock_post)
     client = app.test_client()
@@ -103,9 +112,27 @@ def test_ai_structured_draft_and_form_use_same_terms(app, monkeypatch):
     key = ai_preview.get_json()["id"]
     assert client.post(f"/api/valuations/{key}/explain", json={}, headers=headers).status_code == 404
     assert client.post("/api/valuations", json={"preview_id": key}, headers=headers).status_code == 201
-    monkeypatch.setattr(assistant, "structured_reply", lambda *_: {"explanation": "首次敲出时结算应计票息。"})
     explained = client.post(f"/api/valuations/{key}/explain", json={}, headers=headers)
     assert explained.get_json() == {"explanation": "首次敲出时结算应计票息。"}
+
+
+@pytest.mark.parametrize("finish_reason, content", [
+    ("stop", "   "),
+    ("length", '{"explanation":"未结束"}'),
+    ("stop", '{"explanation":["类型错误"]}'),
+])
+def test_ai_rejects_invalid_deepseek_responses(monkeypatch, finish_reason, content):
+    class Response:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"choices": [{"finish_reason": finish_reason, "message": {"content": content}}]}
+
+    monkeypatch.setattr(assistant.requests, "post", lambda *_args, **_kwargs: Response())
+    with pytest.raises(assistant.AssistantUnavailable):
+        assistant.structured_reply({"AI_KEY": "test", "AI_MODEL": "deepseek-flash"},
+                                   {"explanation": {"type": "string"}}, "Instructions", "Message", {"explanation": ""})
 
 
 def test_vendor_adapter_snapshot_reaches_pricer(app, monkeypatch):

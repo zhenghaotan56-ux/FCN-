@@ -53,8 +53,8 @@ uv run --locked --extra openbb python -m scripts.fetch_demo_data --openbb XHKG:0
 | `LONGBRIDGE_ACCESS_TOKEN` | 长桥 Legacy Access Token |
 | `FCN_LONGBRIDGE_HK_REALTIME` | 已开通 OpenAPI 港股实时权限时填 `1` |
 | `LONGBRIDGE_PRINT_QUOTE_PACKAGES` | `false` |
-| `OPENAI_API_KEY` | OpenAI 项目的 API Key |
-| `OPENAI_MODEL` | 项目可调用并支持 Structured Outputs 的模型 ID，例如 `gpt-5.4-mini` |
+| `DEEPSEEK_API_KEY` | DeepSeek 开放平台生成的 API Key |
+| `DEEPSEEK_MODEL` | `deepseek-flash`，可省略，程序默认使用此模型 |
 
 在本地运行 `uv run --locked python -m scripts.manage_users boss`，交互式设置密码。`FCN_USERS_JSON` 只包含用户名和密码哈希。已有 `FCN_SECRET_KEY`、`FCN_SECURE_COOKIE=1` 和 `PORT=8000` 可继续使用。保存时选 **Save, rebuild, and deploy**。只开 AI 时可继续使用 `FCN_MARKET_MODE=fixture` 并配置独立测试账号。 [Render 环境变量](https://render.com/docs/configure-environment-variables)
 
@@ -62,7 +62,7 @@ uv run --locked --extra openbb python -m scripts.fetch_demo_data --openbb XHKG:0
 
 ## AI 条款草稿
 
-将 `OPENAI_API_KEY` 与有 Structured Outputs 权限的 `OPENAI_MODEL` 配在服务器环境。模型根据输入按 JSON Schema 返回条款草稿。页面提交前要求客户核对标的、期限和价格条款。行情和计算由服务器执行。 [OpenAI Structured Outputs 文档](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses) · [GPT-5.4 mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini)
+在 Render 的 **Environment** 添加 `DEEPSEEK_API_KEY`，可以删除旧的 `OPENAI_API_KEY` 和 `OPENAI_MODEL`。保存并重新部署后，DeepSeek Flash 生成条款草稿与估值解释，服务器校验返回的 JSON。客户确认标的、期限和价格条款后，行情和票息仍由程序计算。 [DeepSeek API Key](https://platform.deepseek.com/api_keys) · [DeepSeek JSON 输出](https://api-docs.deepseek.com/guides/json_mode/)
 
 ## 账号与部署
 

@@ -39,7 +39,8 @@ def create_app(overrides=None):
         ASSUMPTIONS_JSON=os.getenv("FCN_ASSUMPTIONS_JSON", ""),
         VENDOR_URL=os.getenv("FCN_VENDOR_URL", ""), VENDOR_TOKEN=os.getenv("FCN_VENDOR_TOKEN", ""),
         LONGBRIDGE_HK_REALTIME=os.getenv("FCN_LONGBRIDGE_HK_REALTIME") == "1",
-        AI_KEY=os.getenv("OPENAI_API_KEY", ""), AI_MODEL=os.getenv("OPENAI_MODEL", ""),
+        AI_KEY=os.getenv("DEEPSEEK_API_KEY", "").strip(),
+        AI_MODEL=os.getenv("DEEPSEEK_MODEL", "").strip() or "deepseek-flash",
         ALLOW_RESEARCH_DATA=os.getenv("FCN_ALLOW_RESEARCH_DATA") == "1",
         MC_PATHS=100_000,
     )
